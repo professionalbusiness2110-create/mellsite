@@ -9,6 +9,13 @@
 <meta property="og:image" content="ССЫЛКА_НА_ФОТО">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+
+<!-- Vercel Analytics -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -34,6 +41,11 @@
     padding: 2rem 1rem;
   }
 
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   .card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -42,6 +54,7 @@
     width: 100%;
     max-width: 420px;
     text-align: center;
+    animation: fadeUp 0.45s cubic-bezier(.22,.68,0,1.2) both;
   }
 
   .avatar-wrap {
@@ -57,20 +70,6 @@
     object-fit: cover;
     display: block;
     border: 3px solid var(--accent);
-  }
-
-  .avatar-placeholder {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: var(--surface);
-    border: 3px solid var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
-    color: var(--muted);
-    margin: 0 auto;
   }
 
   @keyframes pulse {
@@ -164,6 +163,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    position: relative;
   }
 
   .btn-icon svg { width: 20px; height: 20px; }
@@ -178,17 +178,32 @@
 
   .arrow { color: var(--muted); font-size: 18px; flex-shrink: 0; }
 
+  /* пульс на Kick */
+  .kick-pulse {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #53FC18;
+    border: 2px solid var(--card);
+  }
+  .kick-pulse::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: #53FC18;
+    opacity: 0.4;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
   .divider {
     width: 40px;
     height: 1px;
     background: var(--border);
-    margin: 1.5rem auto;
-  }
-
-  .footer {
-    font-size: 0.75rem;
-    color: var(--muted);
-    opacity: 0.6;
+    margin: 1.5rem auto 1rem;
   }
 
   /* счётчик */
@@ -197,7 +212,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
   }
 
   .counter-dot {
@@ -219,11 +234,37 @@
     font-weight: 700;
     opacity: 1;
   }
+
+  /* кнопка поделиться */
+  .share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 6px 16px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .share-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .share-btn svg { width: 14px; height: 14px; }
+
+  .share-toast {
+    display: none;
+    font-size: 0.75rem;
+    color: #53FC18;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer { font-size: 0.75rem; color: var(--muted); opacity: 0.6; }
 </style>
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 
@@ -259,10 +300,11 @@
     <a class="link-btn" href="https://kick.com/mellstroy987" target="_blank" rel="noopener">
       <div class="btn-icon" style="background:#53FC18;">
         <svg viewBox="0 0 24 24" fill="black"><path d="M2 2h4v7l5-7h5l-6 8 6 8h-5L6 13v7H2z"/></svg>
+        <span class="kick-pulse"></span>
       </div>
       <div class="btn-label">
         Kick
-        <div class="btn-sub">Стримит здесь</div>
+        <div class="btn-sub">Стримит здесь 🟢</div>
       </div>
       <span class="arrow">›</span>
     </a>
@@ -309,31 +351,56 @@
 
   <div class="divider"></div>
 
-  <!-- СЧЁТЧИК ПОСЕТИТЕЛЕЙ -->
-  <div class="counter-wrap">
+  <!-- СЧЁТЧИК -->
+  <div class="counter-wrap" id="counter-wrap">
     <span class="counter-dot"></span>
     <span class="counter-text">Зашли на страницу: <span class="counter-num" id="visit-count">—</span></span>
   </div>
+
+  <!-- КНОПКА ПОДЕЛИТЬСЯ -->
+  <div id="share-toast" class="share-toast">✓ Ссылка скопирована!</div>
+  <button class="share-btn" onclick="shareLink()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+    </svg>
+    Поделиться страницей
+  </button>
 
   <p class="footer">Неофициальная страница · Сделано для фанов</p>
 </div>
 
 <script>
-  // Счётчик посещений через countapi.xyz
-  const COUNTER_KEY = 'mellsite';
-
-  fetch(`https://api.countapi.xyz/hit/mellstroy.page/${COUNTER_KEY}`)
+  // --- СЧЁТЧИК через hits.sh (рабочий) ---
+  fetch('https://hits.sh/mellstroy-hub-2024.json')
     .then(r => r.json())
     .then(data => {
-      if (data && data.value) {
+      const count = data.total ?? data.count ?? data.value;
+      if (count != null) {
         document.getElementById('visit-count').textContent =
-          Number(data.value).toLocaleString('ru-RU');
+          Number(count).toLocaleString('ru-RU');
+      } else {
+        document.getElementById('counter-wrap').style.display = 'none';
       }
     })
     .catch(() => {
-      // если API недоступен — просто не показываем счётчик
-      document.querySelector('.counter-wrap').style.display = 'none';
+      document.getElementById('counter-wrap').style.display = 'none';
     });
+
+  // --- КНОПКА ПОДЕЛИТЬСЯ ---
+  function shareLink() {
+    const url = window.location.href;
+    if (navigator.share) {
+      navigator.share({ title: 'MellStroy — все ссылки', url });
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        const toast = document.getElementById('share-toast');
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 2000);
+      });
+    }
+  }
 </script>
 
 </body>
